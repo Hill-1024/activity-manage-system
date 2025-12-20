@@ -29,7 +29,7 @@ typedef struct Activity {
     char category[50];
     char location[100];
     int max_capacity;
-    char deadline[25]; //2025-05-20T12:00
+    char deadline[25];
     char status[20];
     int current_count;
     EnrolledNode *enrolled_head;
@@ -83,13 +83,13 @@ void get_json_str(const char *json, const char *key, char *dest) {
 
 //数据存储
 void save_students() {
-    FILE *fp = fopen("student.txt", "w"); if (!fp) return;
+    FILE *fp = fopen("Data/student.txt", "w"); if (!fp) return;
     Student *curr = student_head;
     while(curr) { fprintf(fp, "%s %s %s %s %s\n", curr->id, curr->name, curr->password, curr->phone, curr->class_name); curr = curr->next; }
     fclose(fp);
 }
 void load_students() {
-    FILE *fp = fopen("student.txt", "r"); if (!fp) return;
+    FILE *fp = fopen("Data/student.txt", "r"); if (!fp) return;
     char id[20],n[50],p[50],ph[20],c[50];
     while (fscanf(fp, "%s %s %s %s %s", id, n, p, ph, c) != EOF) {
         Student *node = (Student *)malloc(sizeof(Student));
@@ -99,7 +99,7 @@ void load_students() {
     fclose(fp);
 }
 void save_activities() {
-    FILE *fp = fopen("activity.txt", "w"); if (!fp) return;
+    FILE *fp = fopen("Data/activity.txt", "w"); if (!fp) return;
     Activity *curr = activity_head;
     while(curr) {
         check_expiry(curr); // 保存前更新状态
@@ -114,7 +114,7 @@ void save_activities() {
     fclose(fp);
 }
 void load_activities() {
-    FILE *fp = fopen("activity.txt", "r"); if (!fp) return;
+    FILE *fp = fopen("Data/activity.txt", "r"); if (!fp) return;
     int id, max; char name[100], cat[50], loc[100], stat[20], ddl[25], list[4096];
     while(fscanf(fp, "%d %s %s %s %d %s %s %s", &id, name, cat, loc, &max, stat, ddl, list) != EOF) {
         Activity *node = (Activity *)malloc(sizeof(Activity));
@@ -167,7 +167,7 @@ void delete_activity(const int id) {
     Activity *curr = activity_head, *prev = NULL;
     while(curr) {
         if(curr->id == id) {
-            FILE *f = fopen("trash.txt", "a");
+            FILE *f = fopen("Data/trash.txt", "a");
             if(f) { fprintf(f, "DEL: %d %s\n", curr->id, curr->name); fclose(f); }
             if(prev) prev->next = curr->next; else activity_head = curr->next;
             while(curr->enrolled_head) { EnrolledNode *t=curr->enrolled_head; curr->enrolled_head=t->next; free(t); }
