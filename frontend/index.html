@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>登录</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: #5881bd;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .card {
+            width: 400px;
+            padding: 2rem;
+        }
+    </style>
+</head>
+<body>
+<div class="card shadow">
+    <div id="loginP">
+        <h3 class="text-center mb-3">社团登录</h3>
+        <input id="u" class="form-control mb-2" placeholder="账号">
+        <input id="p" type="password" class="form-control mb-3" placeholder="密码">
+        <button onclick="login()" class="btn btn-success w-100 mb-2">登录</button>
+        <p class="text-center">
+            <a href="#" onclick="toggle()">注册学生账号</a>
+        </p>
+    </div>
+    <div id="regP" style="display:none">
+        <h4 class="text-center mb-3">学生注册</h4>
+        <input id="rid" class="form-control mb-2" placeholder="学号 (如 2025001)">
+        <input id="rname" class="form-control mb-2" placeholder="姓名">
+        <input id="rpwd" type="password" class="form-control mb-2" placeholder="密码">
+        <input id="rph" class="form-control mb-2" placeholder="电话">
+        <input id="rcls" class="form-control mb-3" placeholder="班级">
+        <button onclick="reg()" class="btn btn-success w-100 mb-2">提交注册</button>
+        <p class="text-center">
+            <a href="#" onclick="toggle()">返回登录</a>
+        </p>
+    </div>
+</div>
+<script>
+    function toggle() {
+        const l = document.getElementById('loginP'), r = document.getElementById('regP');
+        if (l.style.display === 'none') {
+            l.style.display = 'block';
+            r.style.display = 'none'
+        } else {
+            l.style.display = 'none';
+            r.style.display = 'block'
+        }
+    }
+
+    async function login() {
+        const u = document.getElementById('u').value, p = document.getElementById('p').value;
+        const res = await fetch(
+            '/api/login',
+            {
+                method: 'POST', body: JSON.stringify({username: u, password: p})
+            }
+        );
+        const d = await res.json();
+        if (d.status === 'success') {
+            localStorage.setItem('u', u);
+            location.href = d.role === 'admin' ? 'admin.html' : 'student.html';
+        } else alert(d.msg || '登录失败');
+    }
+
+    async function reg() {
+        const b = {
+            id: document.getElementById('rid').value,
+            name: document.getElementById('rname').value,
+            password: document.getElementById('rpwd').value,
+            phone: document.getElementById('rph').value,
+            class: document.getElementById('rcls').value
+        };
+        const res = await fetch(
+            '/api/register',
+            {
+                method: 'POST', body: JSON.stringify(b)
+            }
+        );
+        const d = await res.json();
+        if (d.status === 'success') {
+            alert('注册成功');
+            toggle();
+        } else alert(d.msg);
+    }
+</script>
+</body>
+</html>
