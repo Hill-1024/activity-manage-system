@@ -11,7 +11,7 @@
 <div class="container">
     <div class="d-flex justify-content-between mb-4">
         <h3>管理后台</h3>
-        <a href="index.html" class="btn btn-outline-dark btn-sm">退出</a>
+        <a href="index.html" class="btn btn-outline-dark">退出</a>
     </div>
     <div class="row">
         <div class="col-md-4">
@@ -182,7 +182,7 @@
         else {
             document.getElementById('em2').style.display = 'none';
             list.forEach(s => {
-                tb.innerHTML += `<tr><td>${s.id}</td><td>${s.name}</td><td>${s.class_name}</td><td>${s.phone}</td></tr>`;
+                tb.innerHTML += `<tr><td>${s.id}</td><td>${s.name}</td><td>${s.classname}</td><td>${s.phone}</td></tr>`;
             });
         }
         document.getElementById('vt').checked = false;
