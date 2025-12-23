@@ -139,13 +139,23 @@
             return alert("时间格式错误！请输入8位数字，例如 20250101");
         }
 
-        await fetch(
+        const res=await fetch(
             '/api/add',
             {
                 method: 'POST', body: JSON.stringify(b)
             }
         );
-        load();
+        const d = await res.json();
+        if (d.status === "added") {
+            document.getElementById('n').value = '';
+            document.getElementById('t').value = '';
+            document.getElementById('l').value = '';
+            document.getElementById('m').value = '50';
+
+            await load();//reload
+        } else {
+            alert(d.msg || "发布失败");
+        }
     }
 
     async function showDetails(id) {
@@ -172,7 +182,7 @@
         else {
             document.getElementById('em2').style.display = 'none';
             list.forEach(s => {
-                tb.innerHTML += `<tr><td>${s.id}</td><td>${s.name}</td><td>${s.classname}</td><td>${s.phone}</td></tr>`;
+                tb.innerHTML += `<tr><td>${s.id}</td><td>${s.name}</td><td>${s.class_name}</td><td>${s.phone}</td></tr>`;
             });
         }
         document.getElementById('vt').checked = false;
@@ -194,7 +204,7 @@
                     method: 'POST', body: JSON.stringify({id})
                 }
             );
-            load();
+            await load();
         }
     }
 
