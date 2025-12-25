@@ -6,75 +6,169 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body class="p-4 bg-light">
+
 <div class="container">
+    <!-- 顶部导航 -->
     <div class="d-flex justify-content-between mb-4">
         <h3>学生中心: <span id="uid"></span></h3>
-        <a href="index.html" class="btn btn-outline-dark btn-sm">退出</a>
+        <a href="index.html" class="btn btn-outline-dark">退出</a>
     </div>
+
     <div class="card p-3 shadow-sm">
         <h5 class="mb-3">活动报名</h5>
+        <div class="row g-2 mb-3">
+            <div class="col-md-3">
+                <select id="filterCat" class="form-select" onchange="filterData()">
+                    <option value="">所有类别</option>
+                    <option value="学术">学术</option>
+                    <option value="文艺">文艺</option>
+                    <option value="体育">体育</option>
+                    <option value="其他">其他</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <input type="date" id="filterDate" class="form-control" onchange="filterData()" title="按日期筛选">
+            </div>
+            <div class="col-md-2">
+                <button onclick="resetFilter()" class="btn btn-outline-secondary w-100">重置筛选</button>
+            </div>
+        </div>
+
+        <!-- 表格区域 -->
         <div class="table-responsive">
-            <table class="table align-middle">
-                <thead>
+            <table class="table align-middle table-hover">
+                <thead class="table-light">
                 <tr>
-                    <th>活动</th>
+                    <th>活动名称</th>
+                    <th>类别</th>
                     <th>时间/地点</th>
                     <th>热度</th>
                     <th>操作</th>
                 </tr>
                 </thead>
-                <tbody id="tb"></tbody>
+                <tbody id="tb">
+                <!-- JS 渲染区域 -->
+                </tbody>
             </table>
+            <!-- 无数据提示 -->
+            <div id="noDataMsg" class="text-center text-muted py-3" style="display:none">
+                没有找到符合条件的活动
+            </div>
         </div>
     </div>
 </div>
+
 <script>
     const u = localStorage.getItem('u');
-    document.getElementById('uid').innerText = u;
+    document.getElementById('uid').innerText = u || '未登录';
+
+    let allActivities = [];
 
     async function load() {
-        const res = await fetch('/api/activities'), data = await res.json();
+        try {
+            const res = await fetch('/api/activities');
+            const data = await res.json();
+
+            allActivities = data;
+
+            render(allActivities);
+        } catch (e) {
+            console.error("加载失败", e);
+            alert("无法连接服务器");
+        }
+    }
+
+    function render(list) {
         const t = document.getElementById('tb');
-        t.innerHTML = '';
-        data.forEach(x => {
+        t.innerHTML = ''; // 清空表格
+
+        // 处理空数据情况
+        if (list.length === 0) {
+            document.getElementById('noDataMsg').style.display = 'block';
+            return;
+        } else {
+            document.getElementById('noDataMsg').style.display = 'none';
+        }
+
+        list.forEach(x => {
+            // 格式化时间 20250520 -> 2025-05-20
             const dStr = x.deadline;
-            const tm = dStr.length === 8 ? `${dStr.substring(0, 4)}-${dStr.substring(4, 6)}-${dStr.substring(6, 8)}` : dStr;
-            const full = x.count >= x.max, closed = x.status === '已结束', pct = Math.round(x.count / x.max * 100);
-            t.innerHTML += `<tr>
-                <td>
-                    <b>${x.name}</b>
-                    <span class="badge bg-light text-dark border">${x.category}</span>
-                </td>
-                <td>
-                    <small class="text-danger">${tm}</small>
-                    <br>
-                    <small>${x.location}</small>
-                </td>
-                <td width="200">
-                    <small>${x.count}/${x.max}</small>
-                    <div class="progress" style="height:5px">
-                        <div class="progress-bar ${full ? 'bg-danger' : 'bg-success'}" style="width:${pct}%"></div>
-                    </div>
-                </td>
-                <td>
-                    <button onclick="join(${x.id})" class="btn btn-sm btn-primary" ${full || closed ? 'disabled' : ''}>${closed ? '已结束' : (full ? '满员' : '报名')}</button>
-                </td>
-            </tr>`;
+            const tm = dStr.length === 8 ? `${dStr.substring(0,4)}-${dStr.substring(4,6)}-${dStr.substring(6,8)}` : dStr;
+
+            const pct = Math.round(x.count / x.max * 100);
+            const full = x.count >= x.max;
+            const closed = x.status === '已结束';
+
+            // 根据状态决定按钮样式
+            let btnHtml = '';
+            if (closed) {
+                btnHtml = `<button class="btn btn-sm btn-secondary" disabled>已结束</button>`;
+            } else if (full) {
+                btnHtml = `<button class="btn btn-sm btn-danger" disabled>已满员</button>`;
+            } else {
+                btnHtml = `<button onclick="join(${x.id})" class="btn btn-sm btn-primary">立即报名</button>`;
+            }
+
+            t.innerHTML += `
+                <tr>
+                    <td><b>${x.name}</b></td>
+                    <td><span class="badge bg-info text-dark bg-opacity-25 border border-info">${x.category}</span></td>
+                    <td>
+                        <small class="text-danger"> ${tm}</small><br>
+                        <small class="text-muted"> ${x.location}</small>
+                    </td>
+                    <td style="width: 200px;">
+                        <div class="d-flex justify-content-between small mb-1">
+                            <span>${x.count}/${x.max}</span>
+                            <span>${pct}%</span>
+                        </div>
+                        <div class="progress" style="height: 6px;">
+                            <div class="progress-bar ${full ? 'bg-danger' : 'bg-success'}" style="width: ${pct}%"></div>
+                        </div>
+                    </td>
+                    <td>${btnHtml}</td>
+                </tr>`;
         });
     }
 
+    function filterData() {
+        const catInput = document.getElementById('filterCat').value;
+        const dateInput = document.getElementById('filterDate').value;
+
+        const filteredList = allActivities.filter(act => {
+            const matchCat = (catInput === '') || (act.category === catInput);
+
+            let matchDate = true;
+            if (dateInput !== '') {
+                const fmtDateInput = dateInput.replace(/-/g, ''); // 去掉横杠
+                matchDate = (act.deadline === fmtDateInput);
+            }
+            return matchCat && matchDate;
+        });
+
+        render(filteredList);
+    }
+
+    function resetFilter() {
+        document.getElementById('filterCat').value = '';
+        document.getElementById('filterDate').value = '';
+        render(allActivities);
+    }
+
     async function join(id) {
-        const r = await fetch(
-            '/api/enroll',
-            {
-                method: 'POST', body: JSON.stringify({id,student_id: u})
-            });
-        let d = await r.json();
+        if(!confirm("确定报名吗？")) return;
+        const r = await fetch('/api/enroll', {
+            method: 'POST',
+            body: JSON.stringify({id: id, student_id: u})
+        });
+        const d = await r.json();
+
         if (d.status === 'success') {
             alert('报名成功');
-            load();
-        } else if (d.status === 'repeat') alert('你已报名');
-        else if (d.status === 'closed') alert('报名已结束');
+            load(); // 重新加载数据（会刷新 allActivities 并重绘）
+        }
+        else if (d.status === 'repeat') alert('你已经报过名了');
+        else if (d.status === 'closed') alert('报名已截止');
         else if (d.status === 'full') alert('人数已满');
         else alert('错误: ' + d.status);
     }

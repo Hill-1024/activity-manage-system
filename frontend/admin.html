@@ -24,7 +24,7 @@
                     <option>体育</option>
                     <option>其他</option>
                 </select>
-                <input id="t" type="text" class="form-control mb-2" placeholder="截止日期 例如:20250101" maxlength="8">
+                <input id="t" type="date" class="form-control mb-2">
                 <input id="l" class="form-control mb-2" placeholder="地点">
                 <input id="m" class="form-control mb-2" value="50" placeholder="人数">
                 <button onclick="add()" class="btn btn-success w-100">发布</button>
@@ -130,14 +130,11 @@
         const b = {
             name: document.getElementById('n').value,
             category: document.getElementById('c').value,
-            deadline: document.getElementById('t').value,
+            deadline: document.getElementById('t').value.replace(/-/g,''),
             location: document.getElementById('l').value,
             max: parseInt(document.getElementById('m').value)
         };
-
-        if (!/^\d{8}$/.test(b.deadline)) {
-            return alert("时间格式错误！请输入8位数字，例如 20250101");
-        }
+        //return alert(b.deadline);
 
         const res=await fetch(
             '/api/add',

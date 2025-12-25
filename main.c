@@ -1,4 +1,3 @@
-#define _CRT_SECURE_NO_WARNINGS
 #include "mongoose.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -234,18 +233,22 @@ void delete_activity(const int id) {
         if (curr->id == id) {
             FILE *f = fopen("Data/trash.txt", "a");
             if (f) {
-                fprintf(f, "DEL: %d %s\n", curr->id, curr->name);
-                fclose(f);
+                fprintf(f, "%d %s %s %s %d %s %s ", curr->id, curr->name, curr->category, curr->location, curr->max_capacity,curr->status, curr->deadline);
             }
             if (prev) prev->next = curr->next;
             else activity_head = curr->next;
-            while (curr->enrolled_head) {
+            if (!curr->enrolled_head) fprintf(f, "None");
+            else while (curr->enrolled_head) {
                 EnrolledNode *t = curr->enrolled_head;
                 curr->enrolled_head = t->next;
+                fprintf(f, "%s", t->student_id);
+                if (t->next) fprintf(f, "|");
                 free(t);
             }
+            fprintf(f, "\n");
             free(curr);
             save_activities();
+            fclose(f);
             return;
         }
         prev = curr;
