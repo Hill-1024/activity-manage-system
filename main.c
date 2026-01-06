@@ -328,7 +328,7 @@ static void fn(struct mg_connection *c, int ev, void *ev_data, void *fn_data) {
             if (ddl[4]=='1'&&ddl[5]>'2'&&ddl[5]<='9') {
                 mg_http_reply(c, 200, "", "{\"status\":\"failed\",\"msg\":\"非法的时间格式\"}");
             }else {
-                    Activity *node = (Activity *) malloc(sizeof(Activity));
+                Activity *node = (Activity *) malloc(sizeof(Activity));
                 node->id = ++global_id_counter;
                 strcpy(node->name, name);
                 strcpy(node->category, cat);
@@ -405,6 +405,40 @@ static void fn(struct mg_connection *c, int ev, void *ev_data, void *fn_data) {
             }
             mg_http_reply(c, 200, "Content-Type: application/json\r\n",
                           "{\"academic\":%d,\"arts\":%d,\"sports\":%d,\"other\":%d}", a, b, cs, d);
+        }else if (mg_match(hm->uri,mg_str("/api/change"),NULL)){
+            int aid=get_json_int(body,"aid");
+            char name[100] = {0}, cat[50] = {0}, loc[100] = {0}, ddl[25] = {0};
+            int max = get_json_int(body, "max");
+            get_json_str(body, "name", name);
+            get_json_str(body, "category", cat);
+            get_json_str(body, "location", loc);
+            get_json_str(body, "deadline", ddl);
+            Activity *curr=activity_head;
+            int flag = 0;
+            while (curr) {
+                if (curr->id == aid) {
+                    if (ddl[4]=='1'&&ddl[5]>'2'&&ddl[5]<='9') {
+                        flag=2;
+                        break;
+                    }
+                    strcpy(curr->name, name);
+                    strcpy(curr->category, cat);
+                    strcpy(curr->location, loc);
+                    strcpy(curr->deadline, ddl);
+                    curr->max_capacity = max;
+                    strcpy(curr->status, "报名中");
+                    flag = 1;
+                    save_activities();//立即保存
+                    break;
+                }
+            }
+            if (flag == 1) {
+                mg_http_reply(c, 200, "", "{\"status\":\"success\",\"msg\":\"None\"}");
+            }else if (flag == 2){
+                mg_http_reply(c, 200, "", "{\"status\":\"failed\",\"msg\":\"非法的时间格式\"}");
+            }else {
+                mg_http_reply(c, 200, "", "{\"status\":\"error\",\"msg\":\"不存在的活动\"}");
+            }
         } else {
             struct mg_http_serve_opts o = {.root_dir = "./frontend"};
             mg_http_serve_dir(c, hm, &o);

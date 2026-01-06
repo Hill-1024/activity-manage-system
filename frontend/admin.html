@@ -11,7 +11,7 @@
 <div class="container">
     <div class="d-flex justify-content-between mb-4">
         <h3>管理后台</h3>
-        <a href="index.html" class="btn btn-outline-dark">退出</a>
+        <a href="index.html" class="btn btn-outline-dark btn">退出</a>
     </div>
     <div class="row">
         <div class="col-md-4">
@@ -26,13 +26,15 @@
                 </select>
                 <input id="t" type="date" class="form-control mb-2">
                 <input id="l" class="form-control mb-2" placeholder="地点">
-                <input id="m" class="form-control mb-2" value="50" placeholder="人数">
+                <input id="m" type="number" class="form-control mb-2" value="50" placeholder="人数">
                 <button onclick="add()" class="btn btn-success w-100">发布</button>
             </div>
             <div class="card p-3">
                 <canvas id="chart"></canvas>
             </div>
         </div>
+
+        <!-- 右侧：列表 -->
         <div class="col-md-8">
             <div class="card p-3 shadow-sm">
                 <h5 class="mb-3">活动管理列表</h5>
@@ -54,7 +56,6 @@
     </div>
 </div>
 
-<!-- 名单详情弹窗 -->
 <div class="modal fade" id="mod" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -67,27 +68,65 @@
                     <span class="text-muted" id="totalCount">共 0 人</span>
                     <div class="form-check form-switch">
                         <input class="form-check-input" type="checkbox" id="vt" onchange="tv()">
-                        <label class="form-check-label">显示详情</label>
+                        <label class="form-check-label">显示详细信息</label>
                     </div>
                 </div>
                 <div id="sv" class="p-2 bg-light border rounded">
                     <div id="bd" class="d-flex flex-wrap gap-2"></div>
-                    <div id="em1" class="text-center text-muted" style="display:none">暂无</div>
+                    <div id="em1" class="text-center text-muted" style="display:none">暂无报名</div>
                 </div>
                 <div id="dv" style="display:none;">
                     <table class="table table-bordered table-sm text-center">
-                        <thead class="table-light">
-                        <tr>
-                            <th>学号</th>
-                            <th>姓名</th>
-                            <th>班级</th>
-                            <th>电话</th>
-                        </tr>
-                        </thead>
+                        <thead class="table-light"><tr><th>学号</th><th>姓名</th><th>班级</th><th>电话</th></tr></thead>
                         <tbody id="tc"></tbody>
                     </table>
-                    <div id="em2" class="text-center text-muted" style="display:none">暂无</div>
+                    <div id="em2" class="text-center text-muted" style="display:none">暂无报名</div>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title">修改活动信息</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- 隐藏域存储当前正在修改的 ID -->
+                <input type="hidden" id="edit_aid">
+
+                <div class="mb-3">
+                    <label class="form-label">活动名称</label>
+                    <input type="text" id="edit_n" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">类别</label>
+                    <select id="edit_c" class="form-select">
+                        <option>学术</option>
+                        <option>文艺</option>
+                        <option>体育</option>
+                        <option>其他</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">截止日期</label>
+                    <input type="date" id="edit_t" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">地点</label>
+                    <input type="text" id="edit_l" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">人数上限</label>
+                    <input type="number" id="edit_m" class="form-control">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="submitChange()">保存修改</button>
             </div>
         </div>
     </div>
@@ -96,13 +135,23 @@
 <script>
     let ch = null;
     const mod = new bootstrap.Modal(document.getElementById('mod'));
+    const editModal = new bootstrap.Modal(document.getElementById('editModal')); // 修改弹窗实例
+
+    // 全局变量存储所有活动数据，方便回显
+    let allActivities = [];
 
     async function load() {
-        const res = await fetch('/api/activities'), data = await res.json();
+        const res = await fetch('/api/activities');
+        const data = await res.json();
+
+        // 1. 保存数据到全局变量
+        allActivities = data;
+
         const t = document.getElementById('list');
         t.innerHTML = '';
         data.forEach(x => {
             const dStr = x.deadline;
+            // 格式化显示: 20260106 -> 2026-01-06
             const fmtDate = dStr.length === 8 ? `${dStr.substring(0, 4)}-${dStr.substring(4, 6)}-${dStr.substring(6, 8)}` : dStr;
 
             t.innerHTML += `<tr>
@@ -118,8 +167,11 @@
                     <small>${x.count}/${x.max}</small>
                 </td>
                 <td>
-                    <button onclick="showDetails(${x.id})" class="btn btn-sm btn-info text-white">名单</button>
-                    <button onclick="del(${x.id})" class="btn btn-sm btn-danger">删除</button>
+                    <div class="btn-group" role="group">
+                        <button onclick="showDetails(${x.id})" class="btn btn-sm btn-info text-white">名单</button>
+                        <button onclick="openEditModal(${x.id})" class="btn btn-sm btn-warning text-dark">修改</button>
+                        <button onclick="del(${x.id})" class="btn btn-sm btn-danger">删除</button>
+                    </div>
                 </td>
             </tr>`;
         });
@@ -127,55 +179,124 @@
     }
 
     async function add() {
+        const name = document.getElementById('n').value.trim();
+        const dateVal = document.getElementById('t').value;
+        const location = document.getElementById('l').value.trim();
+        const maxStr = document.getElementById('m').value;
+
+        if (!name) return alert("请输入活动名称！");
+        if (!dateVal) return alert("请选择截止日期！");
+        if (!location) return alert("请输入举办地点！");
+        if (!maxStr || parseInt(maxStr) <= 0) return alert("人数上限必须大于0");
+
         const b = {
-            name: document.getElementById('n').value,
+            name: name,
             category: document.getElementById('c').value,
-            deadline: document.getElementById('t').value.replace(/-/g,''),
-            location: document.getElementById('l').value,
-            max: parseInt(document.getElementById('m').value)
+            // 格式转换 YYYY-MM-DD -> YYYYMMDD
+            deadline: dateVal.replace(/-/g, ''),
+            location: location,
+            max: parseInt(maxStr)
         };
-        //return alert(b.deadline);
 
-        const res=await fetch(
-            '/api/add',
-            {
-                method: 'POST', body: JSON.stringify(b)
+        try {
+            const res = await fetch('/api/add', { method: 'POST', body: JSON.stringify(b) });
+            const d = await res.json();
+            if (d.status === "added") {
+                // 清空输入框
+                document.getElementById('n').value = '';
+                document.getElementById('t').value = '';
+                document.getElementById('l').value = '';
+                document.getElementById('m').value = '50';
+                await load();
+                alert("发布成功");
+            } else {
+                alert(d.msg || "发布失败");
             }
-        );
-        const d = await res.json();
-        if (d.status === "added") {
-            document.getElementById('n').value = '';
-            document.getElementById('t').value = '';
-            document.getElementById('l').value = '';
-            document.getElementById('m').value = '50';
-
-            await load();//reload
-        } else {
-            alert(d.msg || "发布失败");
+        } catch (e) {
+            alert("请求超时或网络错误");
         }
     }
 
-    async function showDetails(id) {
-        const res = await fetch(
-            '/api/details',
-            {
-                method: 'POST', body: JSON.stringify({id})
+
+    // 1. 打开修改弹窗并回显数据
+    function openEditModal(id) {
+        // 从全局变量中找到当前活动的数据
+        const act = allActivities.find(a => a.id === id);
+        if (!act) return alert("未找到数据");
+
+        document.getElementById('edit_aid').value = act.id;
+        document.getElementById('edit_n').value = act.name;
+        document.getElementById('edit_c').value = act.category;
+        document.getElementById('edit_l').value = act.location;
+        document.getElementById('edit_m').value = act.max;
+
+        let dStr = act.deadline;
+        if (dStr.length === 8) {
+            let fmtDate = `${dStr.substring(0, 4)}-${dStr.substring(4, 6)}-${dStr.substring(6, 8)}`;
+            document.getElementById('edit_t').value = fmtDate;
+        } else {
+            document.getElementById('edit_t').value = '';
+        }
+
+        // 显示弹窗
+        editModal.show();
+    }
+
+    async function submitChange() {
+        const aid = document.getElementById('edit_aid').value;
+        const name = document.getElementById('edit_n').value.trim();
+        const dateVal = document.getElementById('edit_t').value;
+        const location = document.getElementById('edit_l').value.trim();
+        const maxStr = document.getElementById('edit_m').value;
+
+        if (!name) return alert("活动名称不能为空！");
+        if (!dateVal) return alert("截止日期不能为空！");
+        if (!location) return alert("举办地点不能为空！");
+        if (!maxStr || parseInt(maxStr) <= 0) return alert("人数上限必须大于0");
+
+        const bodyData = {
+            aid: parseInt(aid),
+            name: name,
+            category: document.getElementById('edit_c').value,
+            deadline: dateVal.replace(/-/g, ''),
+            location: location,
+            max: parseInt(maxStr)
+        };
+
+        try {
+            const res = await fetch('/api/change', {
+                method: 'POST',
+                body: JSON.stringify(bodyData)
+            });
+            const d = await res.json();
+
+            if (d.status === 'success') {
+                alert("修改成功");
+                editModal.hide(); // 关闭弹窗
+                await load();     // 刷新列表
+            } else {
+                alert("修改失败: " + d.msg);
             }
-        );
+        } catch (e) {
+            alert("请求出错");
+        }
+    }
+
+
+    async function showDetails(id) {
+        const res = await fetch('/api/details', { method: 'POST', body: JSON.stringify({id}) });
         const list = await res.json();
         document.getElementById('totalCount').innerText = `共 ${list.length} 人`;
-        const bd = document.getElementById('bd');
-        bd.innerHTML = '';
-        if (list.length === 0)
-            document.getElementById('em1').style.display = 'block';
+
+        const bd = document.getElementById('bd'); bd.innerHTML = '';
+        if (list.length === 0) document.getElementById('em1').style.display = 'block';
         else {
             document.getElementById('em1').style.display = 'none';
             list.forEach(s => bd.innerHTML += `<span class="badge bg-primary fs-6 fw-normal font-monospace">${s.id}</span>`);
         }
-        const tb = document.getElementById('tc');
-        tb.innerHTML = '';
-        if (list.length === 0)
-            document.getElementById('em2').style.display = 'block';
+
+        const tb = document.getElementById('tc'); tb.innerHTML = '';
+        if (list.length === 0) document.getElementById('em2').style.display = 'block';
         else {
             document.getElementById('em2').style.display = 'none';
             list.forEach(s => {
@@ -195,33 +316,24 @@
 
     async function del(id) {
         if (confirm('确认删除?')) {
-            await fetch(
-                '/api/delete',
-                {
-                    method: 'POST', body: JSON.stringify({id})
-                }
-            );
+            await fetch('/api/delete', { method: 'POST', body: JSON.stringify({id}) });
             await load();
         }
     }
 
     async function updChart() {
         const r = await fetch('/api/stats'), d = await r.json();
-        if (ch)
-            ch.destroy();
-        ch = new Chart(
-            document.getElementById('chart'),
-            {
-                type: 'doughnut',
-                data: {
-                    labels: ['学术', '文艺', '体育', '其他'],
-                    datasets: [{
-                        data: [d.academic, d.arts, d.sports, d.other],
-                        backgroundColor: ['#f87171', '#60a5fa', '#fbbf24', '#34d399']
-                    }]
-                }
+        if (ch) ch.destroy();
+        ch = new Chart(document.getElementById('chart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['学术', '文艺', '体育', '其他'],
+                datasets: [{
+                    data: [d.academic, d.arts, d.sports, d.other],
+                    backgroundColor: ['#f87171', '#60a5fa', '#fbbf24', '#34d399']
+                }]
             }
-        );
+        });
     }
     window.onload = load;
 </script>
