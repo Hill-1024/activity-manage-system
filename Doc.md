@@ -48,7 +48,7 @@ graph TD
     F-->|/api/enroll|enroll[参加活动]-->|aid,sid|back
     F-->|/api/delete|delete[删除活动]-->|aid|back
     F-->|/api/details|details[获取学生详情页]-->|sid|back
-    F-->|/api/status|status[获取活动绘图总览]-->back
+    F-->|/api/status|stats[获取活动绘图总览]-->back
     back[C程序后端]
 ```
 ### 前端请求:
@@ -71,7 +71,7 @@ graph TD
     - 重新获取活动列表
 - 获取学生详情(/api/details):发送POST内容{sID}
     - 展开表格显示详情
-- 获取活动总览(/api/status):无POST内容
+- 获取活动总览(/api/stats):无POST内容
     - 根据返回数据绘制饼状图
 
 ## 感悟总结

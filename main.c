@@ -446,11 +446,11 @@ static void fn(struct mg_connection *c, int ev, void *ev_data, void *fn_data) {
     }
 }
 
-int main(void) {
+int main() {
     struct mg_mgr mgr;
     load_students();
     load_activities();
-    mg_mgr_init(&mgr);
+    mg_mgr_init(&mgr);//初始化消息队列
     mg_http_listen(&mgr, "http://localhost:8000", (mg_event_handler_t) fn, NULL);
     printf("System running at http://localhost:8000\n");
     for (;;) mg_mgr_poll(&mgr, 1000);
